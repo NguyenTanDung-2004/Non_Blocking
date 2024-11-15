@@ -13,65 +13,53 @@ import org.springframework.stereotype.Service;
 
 import com.example.TransactionLock.entity.Product;
 import com.example.TransactionLock.repository.ProductRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 @Service
 public class ProductService {
     @Autowired
     private ProductRepository productRepository;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    public ResponseEntity<Flux<String>> getList() { // get list trả dữ liệu theo từng row
+        // trả dữ liệu theo từng row.
+        String s = "nguyentanDung";
 
-    public ResponseEntity<Flux<String>> getList() {
-        // get data from database as flux
-        Flux<Product> products = this.productRepository.findAll();
-        // convert each product to String
-        Flux<String> productString = products
-                .index()
-                .delayElements(Duration.ofMillis(500))
-                .map(i -> {
-                    long index = i.getT1(); // get index
-                    Product product = i.getT2(); // get value at this index.
-                    try {
-                        return this.objectMapper.writeValueAsString(product);
-                    } catch (JsonProcessingException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    return "";
+        List<Product> list = this.productRepository.findAll();
+
+        // Lấy dữ liệu từ ProductRepository dưới dạng Flux
+        Flux<Product> flux = Flux.fromIterable(list);
+        List<String> list1 = new ArrayList<>();
+        // khi fromIterable ở mỗi dòng thì chúng ta sẽ xử lí cái đóng này thông qua
+        // subscriber
+        flux.index().subscribe(i -> { // đánh index() để có thể lấy ra index
+            Long index = i.getT1();
+            Product product = i.getT2();
+            list1.add(product.getName());
+        },
+                error -> System.err.println("Error: " + error), // Xử lý lỗi nếu có
+                () -> { // khi mà hoàn tất duyeetj qua hết các dòng.
+                    System.out.println(list1);
                 });
-        // return
-        return ResponseEntity
-                .ok()
-                .contentType(MediaType.TEXT_EVENT_STREAM)
-                .body(productString);
 
-    }
-
-    public Mono<ResponseEntity> getList1() {
-
-        // get data from database as flux
-        Flux<Product> flux = this.productRepository.findAll();
-
-        // convert flux to mono
-        Mono<List<Product>> resultMono = flux.index()
+        // Xử lý dữ liệu trong Flux
+        Flux<String> resultFlux = flux.index()
+                .delayElements(Duration.ofMillis(500)) // Mô phỏng trả dần dần, có thể không cần thiết
                 .map(tuple -> {
-                    long index = tuple.getT1(); // get index
-                    Product product = tuple.getT2(); // get the value at this index
-                    return product;
-                })
-                .delaySubscription(Duration.ofMillis(5000)) // delayElements is used to delay for each row,
-                                                            // delaySubscription is used to delay for all
-                .collectList(); // collect products return type to list
+                    long index = tuple.getT1(); // Lấy index
+                    Product product = tuple.getT2(); // Lấy phần tử
+                    // System.out.println(index);
+                    return s + index; // Trả về chuỗi
+                });
 
-        // Bọc kết quả trong ResponseEntity
-        return resultMono.map(ResponseEntity::ok);
+        for (int i = 0; i < 10; i++) {
+            System.out.println("nguyentandung");
+        }
+
+        // Trả về ResponseEntity với kiểu nội dung là Server-Sent Events (SSE)
+        return ResponseEntity.ok()
+                .contentType(MediaType.TEXT_EVENT_STREAM) // Định dạng SSE
+                .body(resultFlux);
 
     }
-
 }

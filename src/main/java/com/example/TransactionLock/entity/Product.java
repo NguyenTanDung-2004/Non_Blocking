@@ -1,7 +1,11 @@
 package com.example.TransactionLock.entity;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Table;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,12 +15,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "product") // R2DBC uses @Table from Spring Data
+@Entity
+@Table(name = "product")
 public class Product {
-
-    @Id // Use @Id from org.springframework.data.annotation for primary keys in R2DBC
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
-
     private String name;
     private int number;
 }
